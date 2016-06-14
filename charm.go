@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"io/ioutil"
 	"log"
+	"time"
 	"github.com/BurntSushi/toml"
 )
 
@@ -66,6 +67,7 @@ func (t *stableTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	}
 	// fan out requests, send responses to the channel, log errors
 	for i := 0; i < t.reqFanFactor; i++ {
+		time.Sleep(5)
 		go func () {
 			resp, err := t.wrappedTransport.RoundTrip(r)
 			if err != nil {
@@ -95,11 +97,14 @@ func (st *Stabilizer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // run
 func run(conf Config, done chan string) {
 	// make a stabilizer
-	upstreamURL := url.Parse(conf.Upstream)
+	upstreamURL, err := url.Parse(conf.Upstream)
+	if err != nil {
+		log.Fatal("error parsing Upstream URL", conf.Upstream)
+	}
 	stabilizer := &Stabilizer{upstreamURL, conf.ReqFanFactor}
 
 	// serve that stabilizer under a timeout
-	timeout := conf.TimeoutMS * time.Milliseconds
+	timeout := time.Duration(conf.TimeoutMS) * time.Millisecond
 	log.Fatal(http.ListenAndServe(
 		":8000",
 		http.TimeoutHandler(stabilizer, timeout, "upstream timeout"),
