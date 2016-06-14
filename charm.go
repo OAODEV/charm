@@ -94,10 +94,16 @@ func (st *Stabilizer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // run
 func run(conf Config, done chan string) {
-	fmt.Println("boo")
-//	log.Fatal(http.ListenAndServe(":8000", http.HandlerFunc(listen)))
-	//TODO: make sure the handler is a timeout handler
-	//https://golang.org/pkg/net/http/#Handler
+	// make a stabilizer
+	upstreamURL := url.Parse(conf.Upstream)
+	stabilizer := &Stabilizer{upstreamURL, conf.ReqFanFactor}
+
+	// serve that stabilizer under a timeout
+	timeout := conf.TimeoutMS * time.Milliseconds
+	log.Fatal(http.ListenAndServe(
+		":8000",
+		http.TimeoutHandler(stabilizer, timeout, "upstream timeout"),
+	))
 }
 
 func main() {
