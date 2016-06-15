@@ -71,7 +71,7 @@ func (t *stableTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 		go func () {
 			resp, err := t.wrappedTransport.RoundTrip(r)
 			if err != nil {
-				fmt.Printf("stableTransport.RoundTrip error (%)\n", err)
+//				fmt.Printf("stableTransport.RoundTrip error (%)\n", err)
 			} else {
 				c <- resp
 			}
