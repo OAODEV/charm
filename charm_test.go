@@ -69,22 +69,18 @@ func TestStabilizerReturnsFirstResponse(t *testing.T) {
 	)
 	defer testStableServer.Close()
 
-	// make many requests and make sure they are all the fast response
-	for i := 0; i < 3; i++ {
-		res, err := http.Get(testStableServer.URL)
-		if err != nil { t.Errorf("error response from stable server") }
+	res, err := http.Get(testStableServer.URL)
+	if err != nil { t.Errorf("error getting response from stable server") }
 
-		message, err := ioutil.ReadAll(res.Body)
-		if err != nil { t.Errorf("error reading response body from stable server") }
-		res.Body.Close()
+	message, err := ioutil.ReadAll(res.Body)
+	if err != nil { t.Errorf("error reading response body from stable server") }
+	res.Body.Close()
 
-		// ensure that all responses are the fast response
-		if string(message) != "fast response" {
-			t.Errorf(string(message))
-		}
-
-		time.Sleep(100 * time.Millisecond)
+	// ensure that all responses are the fast response
+	if string(message) != "fast response" {
+		t.Errorf(string(message))
 	}
+
 }
 
 // TestCanPass proves that tests are running
