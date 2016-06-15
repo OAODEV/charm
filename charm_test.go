@@ -70,7 +70,7 @@ func TestStabilizerReturnsFirstResponse(t *testing.T) {
 	defer testStableServer.Close()
 
 	// make many requests and make sure they are all the fast response
-	for i := 0; i < 50; i++ {
+	for i := 0; i < 100; i++ {
 		res, err := http.Get(testStableServer.URL)
 		if err != nil { t.Errorf("error response from stable server") }
 
@@ -82,6 +82,8 @@ func TestStabilizerReturnsFirstResponse(t *testing.T) {
 		if string(message) != "fast response" {
 			t.Errorf(string(message))
 		}
+
+		time.Sleep(10)
 	}
 }
 
