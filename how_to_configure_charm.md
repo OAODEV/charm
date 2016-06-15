@@ -6,7 +6,7 @@ The file **must** specify values for:
 
 * `Upstream` String the upstream host being stabalized
 * `ReqFanFactor` Int how many duplicate requests to proxy to the upstream per request
-* `TimeoutMS` Int number of miliseconds to wait for a good response from the upstream
+* `TimeoutMS` Int number of milliseconds to wait for a good response from the upstream
 
 ## example
 
