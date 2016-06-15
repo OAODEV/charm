@@ -51,7 +51,7 @@ func TestStabilizerReturnsFirstResponse(t *testing.T) {
 			http.Error(w, "test error", 1234567890)
 		}
 		if reqCount % 3 == 2 {
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(1000 * time.Millisecond)
 			fmt.Fprintf(w, "slow response")
 		}
 		if reqCount % 3 == 0 {
