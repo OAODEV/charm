@@ -2,10 +2,12 @@ package main
 
 import (
 	"fmt"
+/* commenting out imports for commented out test
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+*/
 	"testing"
 	"time"
 )
