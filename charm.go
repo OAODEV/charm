@@ -51,8 +51,6 @@ func start(confPath string) (chan string) {
 	return done
 }
 
-func First() {}
-
 type stableTransport struct {
 	wrappedTransport http.RoundTripper
 	reqFanFactor int
