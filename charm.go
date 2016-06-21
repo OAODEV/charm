@@ -69,7 +69,9 @@ func (t *stableTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 		go func () {
 			resp, err := t.wrappedTransport.RoundTrip(r)
 			if err != nil {
-				// TODO: figure out how much logging we want
+				if i == 0 {
+					log.Printf("transport-error: %v", err)
+				}
 			} else {
 				c <- resp
 			}
