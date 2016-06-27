@@ -151,6 +151,7 @@ func cacheKey(r *http.Request) (string, error) {
 func (conf Config) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// check memcache
 	log.Println("serving", r)
+	log.Println("memcache hosts", len(conf.MemcacheHosts), conf.MemcacheHosts)
 	mc := memcache.New(conf.MemcacheHosts...)
 	key, err := cacheKey(r)
 	if err != nil {
