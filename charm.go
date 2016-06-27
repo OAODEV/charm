@@ -99,10 +99,20 @@ func (t *stableTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 	// wait to reviece the first response
 	first := <-c
-	// send first response to be cached if they want it
+	// copy the first respnse for caching
+	cacheCopy := first
+	if first.Body != nil {
+		bodyBytes, err := ioutil.ReadAll(first.Body)
+		if err != nil {
+			log.Fatal("error reading response body:", err)
+		}
+		first.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+		cacheCopy.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+	}
+	// send the copy to be cached if they want it
 	go func () {
 		select {
-		case t.cacheResponse <- first:
+		case t.cacheResponse <- cacheCopy:
 			return
 		case <-time.After(15 * time.Millisecond):
 			return
@@ -168,6 +178,7 @@ func (conf Config) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		conf.ReqFanFactor,
 		responseChan,
 	}
+	proxy.ServeHTTP(w, r)
 
 	// if the transport has a response waiting on the channel, cache it if
 	// we have a cache
@@ -190,10 +201,6 @@ func (conf Config) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// TODO: figure out how to serve this before caching the response
-	//       we currently get "read on closed response body" if we try
-	//       that.
-	proxy.ServeHTTP(w, r)
 }
 
 // run
