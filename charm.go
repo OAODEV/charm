@@ -204,7 +204,11 @@ func (conf Config) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				Value: dump,
 				Expiration: int32(conf.MemcacheSeconds),
 			}
-			mc.Set(item)
+			err = mc.Set(item)
+			if err != nil {
+				log.Println("memcached set error:", err)
+				return
+			}
 			log.Println("mc set", item)
 		case <-time.After(1 * time.Millisecond):
 			return
