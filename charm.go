@@ -103,11 +103,12 @@ func (t *stableTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	cacheCopy := first
 	if first.Body != nil {
 		bodyBytes, err := ioutil.ReadAll(first.Body)
+		cacheBytes := bodyBytes
 		if err != nil {
 			log.Fatal("error reading response body:", err)
 		}
 		first.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
-		cacheCopy.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+		cacheCopy.Body = ioutil.NopCloser(bytes.NewBuffer(cacheBytes))
 	}
 	// send the copy to be cached if they want it
 	go func () {
