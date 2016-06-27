@@ -150,13 +150,16 @@ func cacheKey(r *http.Request) (string, error) {
 // Conf.ServeHTTP checks memcache then proxies/caches with a stable transport
 func (conf Config) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// check memcache
+	log.Println("serving", r)
 	mc := memcache.New(conf.MemcacheHosts...)
 	key, err := cacheKey(r)
 	if err != nil {
 		log.Println("cache key error for Request(%v)", r)
 	} else {
+		log.Println("checking cache for key:", key)
 		item, err := mc.Get(key)
 		if err == nil { //cache hit
+			log.Println("cache hit!")
 			// get the cached response
 			response, err := http.ReadResponse(
 				bufio.NewReader(bytes.NewReader(item.Value)),
@@ -169,6 +172,7 @@ func (conf Config) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+	log.Println("cache miss!")
 	// cache miss
 	upstreamURL, err := url.Parse(conf.Upstream)
 	if err != nil {
@@ -186,8 +190,10 @@ func (conf Config) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// if the transport has a response waiting on the channel, cache it if
 	// we have a cache
 	if cacheKey != nil {
+		log.Println("cache key:", cacheKey)
 		select {
 		case resp := <- responseChan:
+			log.Println("got response to cache", resp)
 			dump, err := httputil.DumpResponse(resp, true)
 			if err != nil {
 				log.Println("error dumping response:", err)
@@ -199,6 +205,7 @@ func (conf Config) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				Expiration: int32(conf.MemcacheSeconds),
 			}
 			mc.Set(item)
+			log.Println("mc set", item)
 		case <-time.After(1 * time.Millisecond):
 			return
 		}
