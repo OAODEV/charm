@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"net/http"
 	"net/http/httputil"
@@ -144,7 +145,7 @@ func cacheKey(r *http.Request) (string, error) {
 	keyStr += r.Header["X-Forwarded-Email"][0]
 
 	key := sha256.Sum224([]byte(keyStr))
-	return string(key[:sha256.Size224]), nil
+	return hex.EncodeToString(key[:sha256.Size224]), nil
 }
 
 // Conf.ServeHTTP checks memcache then proxies/caches with a stable transport
