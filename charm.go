@@ -100,14 +100,15 @@ func (t *stableTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	// wait to reviece the first response
 	first := <-c
 	// copy the first respnse for caching
-	cacheCopy := first
+	cacheCopy := new(http.Response)
+	*cacheCopy = *first
 	if first.Body != nil {
 		bodyBytes, err := ioutil.ReadAll(first.Body)
-		cacheBytes := make([]byte, len(bodyBytes))
-		copy(cacheBytes, bodyBytes)
 		if err != nil {
 			log.Fatal("error reading response body:", err)
 		}
+		cacheBytes := make([]byte, len(bodyBytes))
+		copy(cacheBytes, bodyBytes)
 		first.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
 		cacheCopy.Body = ioutil.NopCloser(bytes.NewBuffer(cacheBytes))
 	}
