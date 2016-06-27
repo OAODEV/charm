@@ -168,7 +168,6 @@ func (conf Config) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		conf.ReqFanFactor,
 		responseChan,
 	}
-	proxy.ServeHTTP(w, r)
 
 	// if the transport has a response waiting on the channel, cache it if
 	// we have a cache
@@ -177,7 +176,7 @@ func (conf Config) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case resp := <- responseChan:
 			dump, err := httputil.DumpResponse(resp, true)
 			if err != nil {
-				log.Println("error dumping response: %v", err)
+				log.Println("error dumping response:", err)
 				return
 			}
 			item := &memcache.Item{
@@ -190,6 +189,11 @@ func (conf Config) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+
+	// TODO: figure out how to serve this before caching the response
+	//       we currently get "read on closed response body" if we try
+	//       that.
+	proxy.ServeHTTP(w, r)
 }
 
 // run
