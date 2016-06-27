@@ -177,7 +177,7 @@ func (conf Config) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case resp := <- responseChan:
 			dump, err := httputil.DumpResponse(resp, true)
 			if err != nil {
-				log.Println("error dumping response")
+				log.Println("error dumping response: %v", err)
 				return
 			}
 			item := &memcache.Item{
