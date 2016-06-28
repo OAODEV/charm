@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"io/ioutil"
 	"log"
+	"strings"
 	"time"
 	"github.com/bradfitz/gomemcache/memcache"
 	"github.com/BurntSushi/toml"
@@ -148,6 +149,28 @@ func cacheKey(r *http.Request) (string, error) {
 	return hex.EncodeToString(key[:sha256.Size224]), nil
 }
 
+// copyHeader copies headers to the des from the src
+// this code is copied from the reverse proxy library in go
+func copyHeader(dst, src http.Header) {
+	for k, vv := range src {
+		for _, v := range vv {
+			dst.Add(k, v)
+		}
+	}
+}
+
+// copyTrailer builds up the trailer header from Trailer
+// this code is copied from the reverse proxy library in go
+func copyTrailer(w http.ResponseWriter, r *http.Response) {
+	if len(r.Trailer) > 0 {
+		var trailerKeys []string
+		for k := range r.Trailer {
+			trailerKeys = append(trailerKeys, k)
+		}
+		w.Header().Add("Trailer", strings.Join(trailerKeys, ", "))
+	}
+}
+
 // Conf.ServeHTTP checks memcache then proxies/caches with a stable transport
 func (conf Config) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// check memcache
@@ -172,8 +195,33 @@ func (conf Config) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				r,
 			)
 			if err == nil {
-				// write the response to the response writer
-				response.Write(w)
+				// get the bytes out of the body first so if
+				// if there is an error we aren't half way into
+				// responding when we call it a cache miss
+				bodyBytes, err := ioutil.ReadAll(response.Body)
+				if err != nil {
+					log.Println("could not read cached response", err)
+					return
+				}
+				// respond with the cached response
+				// copy the headers to the response writer
+				copyHeader(w.Header(), response.Header)
+				copyTrailer(w, response)
+				w.WriteHeader(response.StatusCode)
+				// from reverse proxy code in go
+				if len(response.Trailer) > 0 {
+					// Forse chunking if we saw a trailer.
+					// Prevents net/http from calculating
+					// length for short bodies and adding
+					// Content-Length.
+					if fl, ok := w.(http.Flusher); ok {
+						fl.Flush()
+					}
+				}
+				w.Write(bodyBytes)
+				response.Body.Close()
+				// copy trailers like in go reverse proxy lib
+				copyHeader(w.Header(), response.Trailer)
 				return
 			}
 		}
