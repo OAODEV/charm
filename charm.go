@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"io/ioutil"
 	"log"
+	"runtime"
 	"strings"
 	"time"
 	"github.com/bradfitz/gomemcache/memcache"
@@ -182,7 +183,7 @@ func (conf Config) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		item, err := mc.Get(key)
 		if err == nil { //cache hit
 			log.Println(
-				"INFO: cache hit!",
+				"INFO: cache hit",
 				r.Method,
 				r.URL.Host,
 				r.URL.Path,
@@ -228,7 +229,7 @@ func (conf Config) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	// cache miss
 	log.Println(
-		"INFO: cache miss!",
+		"INFO: cache miss",
 		r.Method,
 		r.URL.Host,
 		r.URL.Path,
@@ -291,6 +292,28 @@ func run(conf Config, done chan string) {
 func main() {
 	// start Charm,
 	done := start("/secret/charm.conf")
+	stop := make(chan bool)
+	// start some logging of the number of goroutines
+	go func() {
+		log.Println(
+			"Charm is currently using",
+			runtime.NumGoroutine(),
+			"goroutines.",
+		)
+		for {
+			select {
+			case <-time.After(10 * time.Minute):
+				log.Println(
+					"Charm is currently using",
+					runtime.NumGoroutine(),
+					"goroutines.",
+				)
+			case <-stop:
+				return
+			}
+		}
+	}()
 	// when Charm is done, log the message and quit.
         log.Print(<-done)
+	close(stop)
 }
