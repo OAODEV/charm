@@ -151,17 +151,21 @@ func cacheKey(r *http.Request) (string, error) {
 // Conf.ServeHTTP checks memcache then proxies/caches with a stable transport
 func (conf Config) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// check memcache
-	log.Println("serving", r)
-	log.Println("memcache hosts", len(conf.MemcacheHosts), conf.MemcacheHosts)
 	mc := memcache.New(conf.MemcacheHosts...)
 	key, err := cacheKey(r)
 	if err != nil {
-		log.Println("cache key error for Request(%v)", r)
+		log.Println("cache key error for Request:", r)
 	} else {
-		log.Println("checking cache for key:", key)
 		item, err := mc.Get(key)
 		if err == nil { //cache hit
-			log.Println("cache hit!")
+			log.Println(
+				"INFO: cache hit!",
+				r.Method,
+				r.URL.Host,
+				r.URL.Path,
+				r.URL.RawQuery,
+				r.Header["X-Forawrded-Email"][0],
+			)
 			// get the cached response
 			response, err := http.ReadResponse(
 				bufio.NewReader(bytes.NewReader(item.Value)),
@@ -174,8 +178,15 @@ func (conf Config) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	log.Println("cache miss!")
 	// cache miss
+	log.Println(
+		"INFO: cache miss!",
+		r.Method,
+		r.URL.Host,
+		r.URL.Path,
+		r.URL.RawQuery,
+		r.Header["X-Forawrded-Email"][0],
+	)
 	upstreamURL, err := url.Parse(conf.Upstream)
 	if err != nil {
 		log.Fatal("error parsing Upstream URL", conf.Upstream)
@@ -192,13 +203,15 @@ func (conf Config) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// if the transport has a response waiting on the channel, cache it if
 	// we have a cache
 	if cacheKey != nil {
-		log.Println("cache key:", cacheKey)
 		select {
 		case resp := <- responseChan:
 			log.Println("got response to cache", resp)
 			dump, err := httputil.DumpResponse(resp, true)
 			if err != nil {
-				log.Println("error dumping response:", err)
+				log.Println(
+					"ERROR: couldn't dump response:",
+					err,
+				)
 				return
 			}
 			item := &memcache.Item{
@@ -208,10 +221,9 @@ func (conf Config) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			err = mc.Set(item)
 			if err != nil {
-				log.Println("memcached set error:", err)
+				log.Println("ERROR: memcached set error:", err)
 				return
 			}
-			log.Println("mc set", item)
 		case <-time.After(1 * time.Millisecond):
 			return
 		}
