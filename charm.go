@@ -164,7 +164,7 @@ func (conf Config) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				r.URL.Host,
 				r.URL.Path,
 				r.URL.RawQuery,
-				r.Header["X-Forawrded-Email"][0],
+				r.Header["X-Forawrded-Email"],
 			)
 			// get the cached response
 			response, err := http.ReadResponse(
@@ -185,7 +185,7 @@ func (conf Config) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		r.URL.Host,
 		r.URL.Path,
 		r.URL.RawQuery,
-		r.Header["X-Forawrded-Email"][0],
+		r.Header["X-Forawrded-Email"],
 	)
 	upstreamURL, err := url.Parse(conf.Upstream)
 	if err != nil {
