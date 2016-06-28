@@ -205,7 +205,6 @@ func (conf Config) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if cacheKey != nil {
 		select {
 		case resp := <- responseChan:
-			log.Println("got response to cache", resp)
 			dump, err := httputil.DumpResponse(resp, true)
 			if err != nil {
 				log.Println(
