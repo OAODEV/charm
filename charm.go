@@ -66,8 +66,11 @@ func start(confPath string) (chan string) {
 }
 
 type stableTransport struct {
+	// wrappedTransport: the transport we are stabilizing
 	wrappedTransport http.RoundTripper
+	// reqFanFactor: how many times to duplicate the request
 	reqFanFactor int
+	// cacheResponse: a channel whose reciever caches responses sent
 	cacheResponse chan *http.Response
 }
 
