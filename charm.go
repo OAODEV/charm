@@ -153,7 +153,7 @@ func cacheKey(r *http.Request) (string, error) {
 	return hex.EncodeToString(key[:sha256.Size224]), nil
 }
 
-// copyHeader copies headers to the des from the src
+// copyHeader copies headers to the dst from the src
 // this code is copied from the reverse proxy library in go
 func copyHeader(dst, src http.Header) {
 	for k, vv := range src {
@@ -183,8 +183,9 @@ func (conf Config) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println("cache key error for Request:", r)
 	} else {
+		// TODO: refactor these nested ifs
 		item, err := mc.Get(key)
-		if err == nil { //cache hit
+		if err != nil {  //cache hit
 			log.Println(
 				"INFO: cache hit",
 				r.Method,
