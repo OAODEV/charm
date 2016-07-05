@@ -12,7 +12,6 @@ import (
 	"time"
 )
 
-
 // start when there is no config should report that fact right away
 func TestStartWithoutConfig(t *testing.T) {
 	done := start("/not/notaconfig.conf")
@@ -43,7 +42,7 @@ func TestStartWithGoodConfig(t *testing.T) {
 }
 /**
  * Commenting out flakey test - but generally works
- 
+
 // Stabilizer.ServeHTTP should return the first good response
 func TestStabilizerReturnsFirstResponse(t *testing.T) {
 	// mock handler that first errors, then takes a long time then returns a
