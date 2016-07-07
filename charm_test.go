@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
-/* commenting out imports for commented out test
-	"io/ioutil"
+
+//	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
-*/
+//	"net/url"
+
 	"testing"
 	"time"
 )
@@ -40,6 +40,54 @@ func TestStartWithGoodConfig(t *testing.T) {
 		fmt.Print("Stayed up with good config\n")
 	}
 }
+
+func TestConfigIsHandler(t *testing.T) {
+	// set up
+	// make a test server
+	ts := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			fmt.Fprintln(w, "Hello, client")
+		},
+	))
+	defer ts.Close()
+	// make a test cache
+	tcs := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			http.Error(
+				w,
+				"mock cache miss",
+				http.StatusInternalServerError,
+			)
+		},
+	))
+	defer tcs.Close()
+	// make a config with that upstream
+	testConfig := &Config{
+		Upstream: string(ts.URL),
+		ReqFanFactor: 2,
+		TimeoutMS: 1,
+		MemcacheHosts: []string{string(tcs.URL)},
+		CacheSeconds: 0,
+	}
+	// make a response writer and a request
+	w := httptest.NewRecorder()
+	r, err := http.NewRequest("GET", "http//upstream/api/v1/object", nil)
+	if err != nil {
+		t.Errorf("could not create mock request", err)
+	}
+	r.Header.Add("X-Forwarded-Email", "mock@email.com")
+	// run SUT
+	testConfig.ServeHTTP(w, r)
+	// confirm upstream response is written to the response writer
+	if w.Code != 200 {
+		t.Errorf("expected code 200 but got", w.Code)
+	}
+	bodyString := w.Body.String()
+	if bodyString != "Hello, client\n" {
+		t.Errorf("expected 'Hello, client\n', got '%v'", bodyString)
+	}
+}
+
 /**
  * Commenting out flakey test - but generally works
 

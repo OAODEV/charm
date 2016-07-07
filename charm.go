@@ -42,12 +42,17 @@ type memcachedCache struct {
 	expiration int32
 }
 
+// memcacheCache.Get simply forwards our request to the gomemcache lib
 func (mc *memcachedCache) Get(key string) (*Item, error) {
 	memcacheItem, err := mc.client.Get(key)
+	if err != nil {
+		return nil, err
+	}
 	item := &Item{Key: memcacheItem.Key, Value: memcacheItem.Value}
-	return item, err
+	return item, nil
 }
 
+// memcacheCache.Get adds the Expiration to the item and sets it with gomemcache
 func (mc *memcachedCache) Set(item *Item) error {
 	return mc.client.Set(&memcache.Item{
 		Key: item.Key,
@@ -73,17 +78,17 @@ func (conf Config) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	proxy := httputil.NewSingleHostReverseProxy(upstreamURL)
 	// TODO: make transports more elegantly composable
 	stabalizedTransport := &stableTransport{
-		proxy.Transport,
-		conf.ReqFanFactor,
+		wrappedTransport: proxy.Transport,
+		reqFanFactor: conf.ReqFanFactor,
 	}
 	cache := &memcachedCache{
 		client: memcache.New(conf.MemcacheHosts...),
 		expiration: int32(conf.CacheSeconds),
 	}
 	proxy.Transport = &cacheTransport{
-		stabalizedTransport,
-		cacheKey,
-		cache,
+		wrappedTransport: stabalizedTransport,
+		cacheKey: cacheKey,
+		cache: cache,
 	}
 	proxy.ServeHTTP(w, r)
 }
