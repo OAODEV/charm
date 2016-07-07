@@ -2,12 +2,8 @@ package main
 
 import (
 	"fmt"
-
-//	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-//	"net/url"
-
 	"testing"
 	"time"
 )
@@ -41,6 +37,7 @@ func TestStartWithGoodConfig(t *testing.T) {
 	}
 }
 
+// make sure Config.ServeHTTP serves http
 func TestConfigIsHandler(t *testing.T) {
 	// set up
 	// make a test server
@@ -88,52 +85,6 @@ func TestConfigIsHandler(t *testing.T) {
 	}
 }
 
-/**
- * Commenting out flakey test - but generally works
-
-// Stabilizer.ServeHTTP should return the first good response
-func TestStabilizerReturnsFirstResponse(t *testing.T) {
-	// mock handler that first errors, then takes a long time then returns a
-	// a good response
-	reqCount := 0
-	mockHandler := func(w http.ResponseWriter, r *http.Request) {
-		reqCount++
-		if reqCount % 3 == 1 {
-			http.Error(w, "test error", 1234567890)
-		}
-		if reqCount % 3 == 2 {
-			time.Sleep(1000 * time.Millisecond)
-			fmt.Fprintf(w, "slow response")
-		}
-		if reqCount % 3 == 0 {
-			fmt.Fprintf(w, "fast response")
-		}
-	}
-
-	mockUnstableBackend := httptest.NewServer(http.HandlerFunc(mockHandler))
-	defer mockUnstableBackend.Close()
-	u, err := url.Parse(mockUnstableBackend.URL)
-	if err != nil { t.Errorf("error parsing backend url test broken") }
-	testStabilizer := &Stabilizer{u, 4}
-	testStableServer := httptest.NewServer(
-		http.TimeoutHandler(testStabilizer, 5 * time.Second, "timeout"),
-	)
-	defer testStableServer.Close()
-
-	res, err := http.Get(testStableServer.URL)
-	if err != nil { t.Errorf("error getting response from stable server") }
-
-	message, err := ioutil.ReadAll(res.Body)
-	if err != nil { t.Errorf("error reading response body from stable server") }
-	res.Body.Close()
-
-	// ensure that all responses are the fast response
-	if string(message) != "fast response" {
-		t.Errorf(string(message))
-	}
-
-}
-*/
 // TestCanPass proves that tests are running
 func TestCanPass(t *testing.T) {
 	if true != true {
