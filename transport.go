@@ -21,28 +21,28 @@ func (t *stableTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 		t.wrappedTransport = http.DefaultTransport
 	}
 	// fan out requests, send responses to the channel, log errors, don't
-	// wait very long for someone to recieve our response
+	// wait very long for someone to receive our response
 	for i := 0; i < t.reqFanFactor; i++ {
 		go func () {
 			resp, err := t.wrappedTransport.RoundTrip(r)
 			if err != nil {
 				log.Printf("transport-error: %v", err)
-			} else {
-				select {
-				case c <- resp:
-					// they were still waiting for the first
-					// response and they recieved it from c
-					return
-				case <-time.After(1 * time.Millisecond):
-					// no one was waiting to recieve from c
-					// so this is not the first response
-					return
-				}
+				return
+			}
+			select {
+			case c <- resp:
+				// they were still waiting for the first
+				// response and they received it from c
+				return
+			case <-time.After(1 * time.Millisecond):
+				// no one was waiting to receive from c
+				// so this is not the first response
+				return
 			}
 		}()
 	}
 
-	// wait to reviece the first response
+	// wait to receive the first response
 	first := <-c
 	return first, nil
 }
