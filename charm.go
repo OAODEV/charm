@@ -91,6 +91,7 @@ func (conf Config) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		cache: cache,
 	}
 	proxy.ServeHTTP(w, r)
+	log.Println(r.Method, r.URL)
 }
 
 // run
