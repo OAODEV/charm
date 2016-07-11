@@ -154,7 +154,7 @@ func start(confPath string) (chan string) {
 
 func main() {
 	// configure logging
-	switch os.Getenv("LOG_LEVEL") {
+	switch os.Getenv("CHARM_LOG_LEVEL") {
 	case "Debug":
 		log.SetLevel(log.DebugLevel)
 	case "Info":

@@ -42,7 +42,8 @@ func (t *stableTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 				log.Printf("transport-error: %v", err)
 				return
 			}
-			// don't send anything if the response is not good
+			// send bad responses to the error response channel
+			// in case they are being collected
 			if resp.StatusCode != 200 {
 				select {
 				case ec <- resp:
