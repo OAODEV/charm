@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
-	"log"
+	log "github.com/Sirupsen/logrus"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -71,6 +71,9 @@ type Config struct {
 
 // Conf.ServeHTTP checks memcache then proxies/caches with a stable transport
 func (conf Config) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	log.Debug("Config.ServeHTTP started")
+	defer log.Debug("Config.ServeHTTP finished")
+
 	upstreamURL, err := url.Parse(conf.Upstream)
 	if err != nil {
 		log.Fatal("error parsing Upstream URL", conf.Upstream)
@@ -104,8 +107,13 @@ func run(conf Config, done chan string) {
 	))
 }
 
+// TODO refactor this. There is potential for accidental leaks here
 func snd (c chan string, s string) {
-	go func () { c <- s }()
+	go func () {
+		log.Debug("charm.go snd started goroutine")
+		defer log.Debug("charm.go snd ending gorouting")
+		c <- s
+	}()
 }
 
 // start starts Charm up and returns a done channel for the done message
@@ -144,21 +152,40 @@ func start(confPath string) (chan string) {
 }
 
 func main() {
+	// configure logging
+	switch os.GetEnv("LOG_LEVEL") {
+	case "Debug":
+		log.SetLevel(log.DebugLevel)
+	case "Info":
+		log.SetLevel(log.InfoLevel)
+	case "Warn":
+		log.SetLevel(log.WarnLevel)
+	case "Error":
+		log.SetLevel(log.ErrorLevel)
+	case "Fatal":
+		log.SetLevel(log.FatalLevel)
+	case "Panic":
+		log.SetLevel(log.PanicLevel)
+	default:
+		log.SetLevel(log.WarnLevel)
+
+	}
+
 	// start Charm,
 	done := start("/secret/charm.conf")
 	stop := make(chan bool)
 	// start some logging of the number of goroutines
 	// TODO: make this goroutine logging more flexible
 	go func() {
-		log.Println(
+		log.Debug(
 			"Charm is currently using",
 			runtime.NumGoroutine(),
 			"goroutines.",
 		)
 		for {
 			select {
-			case <-time.After(10 * time.Minute):
-				log.Println(
+			case <-time.After(1 * time.Minute):
+				log.Debug(
 					"Charm is currently using",
 					runtime.NumGoroutine(),
 					"goroutines.",

@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"io/ioutil"
-	"log"
+	log "github.com/Sirupsen/logrus"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -32,6 +32,9 @@ type cacheTransport struct {
 }
 
 func (ct *cacheTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	log.Debug("cacheTransport.RoundTrip starting")
+	defer log.Debug("cacheTransport.RoundTrip finished")
+
 	// first check the cache
 	key, err := ct.cacheKey(r)
 	if err != nil {
@@ -54,6 +57,7 @@ func (ct *cacheTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 			r.Header,
 		)
 	}
+
 	// if we have an item, return that as the response
 	if item != nil {
 		reader := bufio.NewReader(bytes.NewReader(item.Value))
@@ -85,12 +89,16 @@ func (ct *cacheTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 		response.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
 		cacheCopy.Body = ioutil.NopCloser(bytes.NewBuffer(cacheBytes))
 	}
+
 	go func () {
+		log.Debug("cacheTransport.RoundTrip setting response in cache")
+		defer log.Debug("cacheTransport.RoundTrip cache set finished")
 		dump, err := httputil.DumpResponse(cacheCopy, true)
 		if err != nil {
 			log.Fatal("could not dump response", err)
 		}
 		ct.cache.Set(&Item{Key: key, Value: dump})
 	}()
+
 	return response, nil
 }

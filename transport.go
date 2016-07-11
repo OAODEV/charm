@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	log "github.com/Sirupsen/logrus"
 	"net/http"
 	"time"
 )
@@ -16,6 +16,9 @@ type stableTransport struct {
 // stableTransport.RoundTrip makes many round trips and returns the first
 // response
 func (t *stableTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	log.Debug("stableTransport.RoundTrip starting")
+	defer log.Debug("stableTransport.RoundTrip finished")
+
 	// channel to send the fisrt good response
 	rc := make(chan *http.Response)
 	// channel to send and collect bad (error) responses
@@ -28,6 +31,13 @@ func (t *stableTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	// wait very long for someone to receive our response
 	for i := 0; i < t.reqFanFactor; i++ {
 		go func () {
+			log.WithFields(log.Fields{
+				"fanNum": string(i),
+			}).Debug("stableTransport.RoundTrip fan req starting")
+			defer log.WithFields(log.Fields{
+				"fanNum": string(i),
+			}).Debug("stableTransport.RoundTrip fan req complete")
+
 			resp, err := t.wrappedTransport.RoundTrip(r)
 			if err != nil {
 				log.Printf("transport-error: %v", err)
@@ -35,16 +45,21 @@ func (t *stableTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 			}
 			// don't send anything if the response is not good
 			if resp.StatusCode != 200 {
-				ec <- resp
-				return
+				select {
+				case ec <- resp:
+					return
+				default:
+					// no one is waiting for errors, move on
+					return
+				}
 			}
 			select {
 			case rc <- resp:
 				// they were still waiting for the first
-				// response and they received it from c
+				// response and they received it from rc
 				return
-			case <-time.After(1 * time.Millisecond):
-				// no one was waiting to receive from c
+			default:
+				// no one was waiting to receive from rc
 				// so this is not the first response
 				return
 			}
