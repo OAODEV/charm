@@ -3,7 +3,6 @@ package main
 import (
 	log "github.com/Sirupsen/logrus"
 	"net/http"
-	"time"
 )
 
 type stableTransport struct {

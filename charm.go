@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"runtime"
 	"time"
 	"github.com/bradfitz/gomemcache/memcache"
@@ -153,7 +154,7 @@ func start(confPath string) (chan string) {
 
 func main() {
 	// configure logging
-	switch os.GetEnv("LOG_LEVEL") {
+	switch os.Getenv("LOG_LEVEL") {
 	case "Debug":
 		log.SetLevel(log.DebugLevel)
 	case "Info":
