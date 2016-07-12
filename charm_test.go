@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -34,6 +35,80 @@ func TestStartWithGoodConfig(t *testing.T) {
 		t.Errorf("done with message\n \"%s\"", message)
 	case <-time.After(time.Millisecond * 50):
 		fmt.Print("Stayed up with good config\n")
+	}
+}
+
+// stableTransport returns a bad response if all responses are bad
+func Test500IfAll500(t *testing.T) {
+	// set up
+	// make a servier that always responds with an error
+	ts := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			http.Error(w, "It's always something", 500)
+		},
+	))
+	// make a stableTransport fanning out to two requests
+	transport := &stableTransport{
+		wrappedTransport: nil,
+		reqFanFactor: 2,
+	}
+	// run SUT
+	req, err := http.NewRequest("GET", string(ts.URL), nil)
+	if err != nil {
+		t.Errorf("could not create request", err)
+	}
+	resp, err := transport.RoundTrip(req)
+	if err != nil {
+		t.Errorf("could not make round trip", err)
+	}
+	// confirm that the we get a bad response
+	if resp.StatusCode != 500 {
+		t.Error("expected 500 error but got", resp.StatusCode)
+	}
+}
+
+// stableTransport waits for a non 5xx response
+func TestNo500Responses(t *testing.T) {
+	// set up
+	// make a server that errors once, then responds after a delay
+	i := 0
+	ts := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			if i == 0 {
+				http.Error(w, "fast server error", 500)
+				i = 1
+			} else {
+				time.Sleep(1 * time.Millisecond)
+				fmt.Fprintf(w, "delayed good response")
+			}
+		},
+	))
+	// make a stableTransport fanning out to two requests
+	transport := &stableTransport{
+		wrappedTransport: nil,
+		reqFanFactor: 2,
+	}
+	// run SUT
+	// send request to that server through that stableTransport
+	req, err := http.NewRequest("GET", string(ts.URL), nil)
+	if err != nil {
+		t.Errorf("error making new request", err)
+	}
+	resp, err := transport.RoundTrip(req)
+	if err != nil {
+		t.Errorf("transport error", err)
+	}
+	// confirm that the delayed but good response is returned
+	if resp.StatusCode != 200 {
+		t.Errorf("expected response status 200, got: %v", resp.Status)
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	bodyStr := string(body)
+	if err != nil {
+		t.Errorf("body read error", err)
+	}
+	if bodyStr != "delayed good response" {
+		t.Errorf("expected 'delayed good response' got '%v'", bodyStr)
 	}
 }
 
