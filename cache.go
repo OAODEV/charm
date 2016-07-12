@@ -71,8 +71,11 @@ func (ct *cacheTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	if err != nil {
 		log.Fatal("cacheTransport upstream error:", err)
 	}
-	// and make sure we cache a copy of the response but don't wait to
-	// return the response
+	// and make sure we cache a copy of the response if it's good
+	// but don't wait to return the response
+	if response.StatusCode != 200 {
+		return response, nil
+	}
 	cacheCopy := new(http.Response)
 	*cacheCopy = *response
 	if response.Body != nil {
