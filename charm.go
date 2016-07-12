@@ -11,7 +11,6 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
-	"runtime"
 	"time"
 	"github.com/bradfitz/gomemcache/memcache"
 	"github.com/BurntSushi/toml"
@@ -73,9 +72,6 @@ type Config struct {
 
 // Conf.ServeHTTP checks memcache then proxies/caches with a stable transport
 func (conf Config) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Debug("Config.ServeHTTP started")
-	defer log.Debug("Config.ServeHTTP finished")
-
 	upstreamURL, err := url.Parse(conf.Upstream)
 	if err != nil {
 		log.Fatal("error parsing Upstream URL", conf.Upstream)
@@ -111,11 +107,7 @@ func run(conf Config, done chan string) {
 
 // TODO refactor this. There is potential for accidental leaks here
 func snd (c chan string, s string) {
-	go func () {
-		log.Debug("charm.go snd started goroutine")
-		defer log.Debug("charm.go snd ending gorouting")
-		c <- s
-	}()
+	go func () { c <- s }()
 }
 
 // start starts Charm up and returns a done channel for the done message
@@ -173,31 +165,9 @@ func main() {
 
 	}
 
-	// start Charm,
+	// start Charm
 	done := start("/secret/charm.conf")
-	stop := make(chan bool)
-	// start some logging of the number of goroutines
-	// TODO: make this goroutine logging more flexible
-	go func() {
-		log.Debug(
-			"Charm is currently using",
-			runtime.NumGoroutine(),
-			"goroutines.",
-		)
-		for {
-			select {
-			case <-time.After(1 * time.Minute):
-				log.Debug(
-					"Charm is currently using",
-					runtime.NumGoroutine(),
-					"goroutines.",
-				)
-			case <-stop:
-				return
-			}
-		}
-	}()
+
 	// when Charm is done, log the message and quit.
         log.Print(<-done)
-	close(stop)
 }

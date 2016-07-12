@@ -15,9 +15,6 @@ type stableTransport struct {
 // stableTransport.RoundTrip makes many round trips and returns the first
 // response
 func (t *stableTransport) RoundTrip(r *http.Request) (*http.Response, error) {
-	log.Debug("stableTransport.RoundTrip starting")
-	defer log.Debug("stableTransport.RoundTrip finished")
-
 	// channel to send the fisrt good response
 	rc := make(chan *http.Response)
 	// channel to send and collect bad (error) responses
