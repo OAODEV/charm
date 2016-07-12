@@ -27,13 +27,6 @@ func (t *stableTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	// wait very long for someone to receive our response
 	for i := 0; i < t.reqFanFactor; i++ {
 		go func () {
-			log.WithFields(log.Fields{
-				"fanNum": string(i),
-			}).Debug("stableTransport.RoundTrip fan req starting")
-			defer log.WithFields(log.Fields{
-				"fanNum": string(i),
-			}).Debug("stableTransport.RoundTrip fan req complete")
-
 			resp, err := t.wrappedTransport.RoundTrip(r)
 			if err != nil {
 				log.Printf("transport-error: %v", err)
