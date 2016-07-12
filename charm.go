@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "net/http/pprof"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
