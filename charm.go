@@ -103,10 +103,10 @@ func (conf Config) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func run(conf Config, done chan string) {
 	// serve the config under a timeout
 	timeout := time.Duration(conf.TimeoutMS) * time.Millisecond
-	log.Fatal(http.ListenAndServe(
-		":8000",
-		http.TimeoutHandler(conf, timeout, "upstream timeout"),
-	))
+	// use the default serve mux so we get pprof endpoints
+	timeoutHandler := http.TimeoutHandler(conf, timeout, "upstream timeout")
+	http.HandleFunc("/", timeoutHandler)
+	log.Fatal(http.ListenAndServe(":8000", nil))
 }
 
 // TODO refactor this. There is potential for accidental leaks here
