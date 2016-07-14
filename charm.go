@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "net/http/pprof"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -10,7 +11,6 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
-	"runtime"
 	"time"
 	"github.com/bradfitz/gomemcache/memcache"
 	"github.com/BurntSushi/toml"
@@ -72,9 +72,6 @@ type Config struct {
 
 // Conf.ServeHTTP checks memcache then proxies/caches with a stable transport
 func (conf Config) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Debug("Config.ServeHTTP started")
-	defer log.Debug("Config.ServeHTTP finished")
-
 	upstreamURL, err := url.Parse(conf.Upstream)
 	if err != nil {
 		log.Fatal("error parsing Upstream URL", conf.Upstream)
@@ -102,19 +99,15 @@ func (conf Config) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func run(conf Config, done chan string) {
 	// serve the config under a timeout
 	timeout := time.Duration(conf.TimeoutMS) * time.Millisecond
-	log.Fatal(http.ListenAndServe(
-		":8000",
-		http.TimeoutHandler(conf, timeout, "upstream timeout"),
-	))
+	// use the default serve mux so we get pprof endpoints
+	timeoutHandler := http.TimeoutHandler(conf, timeout, "upstream timeout")
+	http.Handle("/", timeoutHandler)
+	log.Fatal(http.ListenAndServe(":8000", nil))
 }
 
 // TODO refactor this. There is potential for accidental leaks here
 func snd (c chan string, s string) {
-	go func () {
-		log.Debug("charm.go snd started goroutine")
-		defer log.Debug("charm.go snd ending gorouting")
-		c <- s
-	}()
+	go func () { c <- s }()
 }
 
 // start starts Charm up and returns a done channel for the done message
@@ -172,31 +165,9 @@ func main() {
 
 	}
 
-	// start Charm,
+	// start Charm
 	done := start("/secret/charm.conf")
-	stop := make(chan bool)
-	// start some logging of the number of goroutines
-	// TODO: make this goroutine logging more flexible
-	go func() {
-		log.Debug(
-			"Charm is currently using",
-			runtime.NumGoroutine(),
-			"goroutines.",
-		)
-		for {
-			select {
-			case <-time.After(1 * time.Minute):
-				log.Debug(
-					"Charm is currently using",
-					runtime.NumGoroutine(),
-					"goroutines.",
-				)
-			case <-stop:
-				return
-			}
-		}
-	}()
+
 	// when Charm is done, log the message and quit.
         log.Print(<-done)
-	close(stop)
 }

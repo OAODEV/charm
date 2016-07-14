@@ -32,9 +32,6 @@ type cacheTransport struct {
 }
 
 func (ct *cacheTransport) RoundTrip(r *http.Request) (*http.Response, error) {
-	log.Debug("cacheTransport.RoundTrip starting")
-	defer log.Debug("cacheTransport.RoundTrip finished")
-
 	// first check the cache
 	key, err := ct.cacheKey(r)
 	if err != nil {
@@ -74,8 +71,11 @@ func (ct *cacheTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	if err != nil {
 		log.Fatal("cacheTransport upstream error:", err)
 	}
-	// and make sure we cache a copy of the response but don't wait to
-	// return the response
+	// and make sure we cache a copy of the response if it's good
+	// but don't wait to return the response
+	if response.StatusCode != 200 {
+		return response, nil
+	}
 	cacheCopy := new(http.Response)
 	*cacheCopy = *response
 	if response.Body != nil {
@@ -91,8 +91,6 @@ func (ct *cacheTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	}
 
 	go func () {
-		log.Debug("cacheTransport.RoundTrip setting response in cache")
-		defer log.Debug("cacheTransport.RoundTrip cache set finished")
 		dump, err := httputil.DumpResponse(cacheCopy, true)
 		if err != nil {
 			log.Fatal("could not dump response", err)
